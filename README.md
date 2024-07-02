@@ -1,5 +1,3 @@
-### Technical Article
-
 #### Creating Linux Users with Bash Script: A Step-by-Step Guide
 
 Managing users in a Linux environment can be a challenging task, especially when dealing with a large number of users. Automation using Bash scripts can streamline this process. In this article, we will walk you through a Bash script designed to automate the creation of users, setup home directories, assign groups, and generate passwords, while maintaining logs and securing sensitive information.
