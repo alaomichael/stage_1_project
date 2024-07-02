@@ -95,7 +95,3 @@ For more information on how to automate such tasks and streamline your workflows
 ### Conclusion
 
 Automating user management in Linux with Bash scripts not only saves time but also ensures consistency and security. By following the steps outlined in this article, you can easily set up a robust user management system tailored to your organization's needs.
-
----
-
-Feel free to adapt this script to your specific requirements and ensure you test it in a safe environment before deploying it to production. Happy scripting!
