@@ -25,17 +25,17 @@ PASSWORD_FILE="/var/secure/user_passwords.csv"
 INPUT_FILE="$1"
 
 # Ensure the log file exists
-touch "$LOG_FILE"
-chmod 644 "$LOG_FILE"
+sudo touch "$LOG_FILE"
+sudo chmod 644 "$LOG_FILE"
 
 # Ensure the secure directory and password file exist
-mkdir -p /var/secure
-touch "$PASSWORD_FILE"
-chmod 600 "$PASSWORD_FILE"
+sudo mkdir -p /var/secure
+sudo touch "$PASSWORD_FILE"
+sudo chmod 600 "$PASSWORD_FILE"
 
 # Function to log messages
 log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | sudo tee -a "$LOG_FILE"
 }
 
 # Function to create users and groups
@@ -51,48 +51,49 @@ create_user() {
 
     # Create a group with the same name as the user
     if ! getent group "$username" &>/dev/null; then
-        groupadd "$username"
+        sudo groupadd "$username"
         log_message "Group $username created."
     fi
 
     # Create the user and add to their own group
-    useradd -m -g "$username" -s /bin/bash "$username"
+    sudo useradd -m -g "$username" -s /bin/bash "$username"
     log_message "User $username created."
 
     # Add user to additional groups
     IFS=',' read -ra group_array <<< "$groups"
     for group in "${group_array[@]}"; do
-        if getent group "$group" &>/dev/null; then
-            usermod -aG "$group" "$username"
-            log_message "Added $username to group $group."
-        else
-            log_message "Group $group does not exist. Skipping."
+        if ! getent group "$group" &>/dev/null; then
+            sudo groupadd "$group"
+            log_message "Group $group created."
         fi
+        sudo usermod -aG "$group" "$username"
+        log_message "Added $username to group $group."
     done
 
     # Set a random password
     password=$(openssl rand -base64 12)
-    echo "$username:$password" | chpasswd
+    echo "$username:$password" | sudo chpasswd
     log_message "Password set for user $username."
 
     # Store the username and password in the secure file
-    echo "$username,$password" >> "$PASSWORD_FILE"
+    echo "$username,$password" | sudo tee -a "$PASSWORD_FILE" > /dev/null
     log_message "Stored password for user $username."
 
     # Set the home directory permissions
-    chown "$username:$username" "/home/$username"
-    chmod 700 "/home/$username"
+    sudo chown "$username:$username" "/home/$username"
+    sudo chmod 700 "/home/$username"
     log_message "Home directory for $username set with appropriate permissions and ownership."
 }
 
-# Process each line in the input file
-while IFS=';' read -r username groups; do
+# Read input file and process each line
+while IFS=';' read -r username groups || [ -n "$username" ]; do
     username=$(echo "$username" | xargs)
     groups=$(echo "$groups" | xargs)
     create_user "$username" "$groups"
 done < "$INPUT_FILE"
 
 log_message "User creation script completed."
+
 ```
 
 ### How It Works
@@ -117,8 +118,8 @@ PASSWORD_FILE="/var/secure/user_passwords.csv"
 INPUT_FILE="$1"
 ```
 
-- `#!/bin/bash`: This is the shebang line that tells the system to use the Bash shell to interpret the script.
-- `LOG_FILE`: Defines the path to the log file where actions will be logged.
+- `#!/bin/bash`: This is the shebang line that specifies the script should be run using the Bash shell.
+- `LOG_FILE`: Defines the path to the log file where actions will be recorded.
 - `PASSWORD_FILE`: Defines the path to the file where user passwords will be securely stored.
 - `INPUT_FILE`: Captures the first argument passed to the script, which is the name of the text file containing usernames and groups.
 
@@ -126,32 +127,32 @@ INPUT_FILE="$1"
 
 ```bash
 # Ensure the log file exists
-touch "$LOG_FILE"
-chmod 644 "$LOG_FILE"
+sudo touch "$LOG_FILE"
+sudo chmod 644 "$LOG_FILE"
 
 # Ensure the secure directory and password file exist
-mkdir -p /var/secure
-touch "$PASSWORD_FILE"
-chmod 600 "$PASSWORD_FILE"
+sudo mkdir -p /var/secure
+sudo touch "$PASSWORD_FILE"
+sudo chmod 600 "$PASSWORD_FILE"
 ```
 
-- `touch "$LOG_FILE"`: Creates the log file if it doesn't already exist.
-- `chmod 644 "$LOG_FILE"`: Sets permissions for the log file so it is readable by all users but writable only by the owner.
-- `mkdir -p /var/secure`: Creates the `/var/secure` directory if it doesn't exist.
-- `touch "$PASSWORD_FILE"`: Creates the password file if it doesn't exist.
-- `chmod 600 "$PASSWORD_FILE"`: Sets permissions for the password file so only the owner can read and write it.
+- `sudo touch "$LOG_FILE"`: Creates the log file if it doesn't already exist.
+- `sudo chmod 644 "$LOG_FILE"`: Sets permissions for the log file so it is readable by all users but writable only by the owner.
+- `sudo mkdir -p /var/secure`: Creates the `/var/secure` directory if it doesn't exist.
+- `sudo touch "$PASSWORD_FILE"`: Creates the password file if it doesn't exist.
+- `sudo chmod 600 "$PASSWORD_FILE"`: Sets permissions for the password file so only the owner can read and write it.
 
 #### 3. Logging Function
 
 ```bash
 # Function to log messages
 log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | sudo tee -a "$LOG_FILE"
 }
 ```
 
 - `log_message()`: A function that takes a message as an argument and appends it to the log file with a timestamp.
-- `echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"`: Formats the log message with a timestamp and writes it to the log file.
+- `echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | sudo tee -a "$LOG_FILE"`: Formats the log message with a timestamp and writes it to the log file.
 
 #### 4. User and Group Creation Function
 
@@ -169,37 +170,37 @@ create_user() {
 
     # Create a group with the same name as the user
     if ! getent group "$username" &>/dev/null; then
-        groupadd "$username"
+        sudo groupadd "$username"
         log_message "Group $username created."
     fi
 
     # Create the user and add to their own group
-    useradd -m -g "$username" -s /bin/bash "$username"
+    sudo useradd -m -g "$username" -s /bin/bash "$username"
     log_message "User $username created."
 
     # Add user to additional groups
     IFS=',' read -ra group_array <<< "$groups"
     for group in "${group_array[@]}"; do
-        if getent group "$group" &>/dev/null; then
-            usermod -aG "$group" "$username"
-            log_message "Added $username to group $group."
-        else
-            log_message "Group $group does not exist. Skipping."
+        if ! getent group "$group" &>/dev/null; then
+            sudo groupadd "$group"
+            log_message "Group $group created."
         fi
+        sudo usermod -aG "$group" "$username"
+        log_message "Added $username to group $group."
     done
 
     # Set a random password
     password=$(openssl rand -base64 12)
-    echo "$username:$password" | chpasswd
+    echo "$username:$password" | sudo chpasswd
     log_message "Password set for user $username."
 
     # Store the username and password in the secure file
-    echo "$username,$password" >> "$PASSWORD_FILE"
+    echo "$username,$password" | sudo tee -a "$PASSWORD_FILE" > /dev/null
     log_message "Stored password for user $username."
 
     # Set the home directory permissions
-    chown "$username:$username" "/home/$username"
-    chmod 700 "/home/$username"
+    sudo chown "$username:$username" "/home/$username"
+    sudo chmod 700 "/home/$username"
     log_message "Home directory for $username set with appropriate permissions and ownership."
 }
 ```
@@ -208,21 +209,21 @@ create_user() {
 - `local username=$1` and `local groups=$2`: Capture the username and groups as local variables.
 - `if id "$username" &>/dev/null; then`: Check if the user already exists using the `id` command.
 - `if ! getent group "$username" &>/dev/null; then`: Check if the user's primary group exists.
-- `groupadd "$username"`: Create the primary group for the user.
-- `useradd -m -g "$username" -s /bin/bash "$username"`: Create the user with a home directory and set their shell to Bash.
+- `sudo groupadd "$username"`: Create the primary group for the user.
+- `sudo useradd -m -g "$username" -s /bin/bash "$username"`: Create the user with a home directory and set their shell to Bash.
 - `IFS=',' read -ra group_array <<< "$groups"`: Split the groups string into an array.
 - `for group in "${group_array[@]}"; do`: Loop through each group in the array.
-- `usermod -aG "$group" "$username"`: Add the user to each additional group.
+- `sudo usermod -aG "$group" "$username"`: Add the user to each additional group.
 - `password=$(openssl rand -base64 12)`: Generate a random password using `openssl`.
-- `echo "$username:$password" | chpasswd`: Set the user's password.
-- `echo "$username,$password" >> "$PASSWORD_FILE"`: Store the username and password in the secure file.
-- `chown "$username:$username" "/home/$username"` and `chmod 700 "/home/$username"`: Set ownership and permissions for the user's home directory.
+- `echo "$username:$password" | sudo chpasswd`: Set the user's password.
+- `echo "$username,$password" | sudo tee -a "$PASSWORD_FILE" > /dev/null`: Store the username and password in the secure file.
+- `sudo chown "$username:$username" "/home/$username"` and `sudo chmod 700 "/home/$username"`: Set ownership and permissions for the user's home directory.
 
 #### 5. Process Each Line in the Input File
 
 ```bash
 # Process each line in the input file
-while IFS=';' read -r username groups; do
+while IFS=';' read -r username groups || [ -n "$username" ]; do
     username=$(echo "$username" | xargs)
     groups=$(echo "$groups" | xargs)
     create_user "$username" "$groups"
@@ -231,12 +232,10 @@ done < "$INPUT_FILE"
 log_message "User creation script completed."
 ```
 
-- `while IFS=';' read -r username groups; do`: Read each line in the input file, splitting the line into `username` and `groups` using `;` as the delimiter.
+- `while IFS=';' read -r username groups || [ -n "$username" ];`: Read each line in the input file, splitting the line into `username` and `groups` using `;` as the delimiter, and ensure the last line is processed even if it doesn't end with a newline.
 - `username=$(echo "$username" | xargs)` and `groups=$(echo "$groups" | xargs)`: Trim any leading or trailing whitespace from `username` and `groups`.
 - `create_user "$username" "$groups"`: Call the `create_user` function for each user and their groups.
 - `log_message "User creation script completed."`: Log the completion of the script.
-
-----
 
 ### Testing the Script
 
@@ -276,7 +275,6 @@ To test the script on a Windows machine using WSL and VS Code, follow these step
      ```bash
      cat /var/secure/user_passwords.csv
      ```
----
 
 ### Conclusion
 
